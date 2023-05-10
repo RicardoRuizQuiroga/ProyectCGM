@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">ProyectCGM</string>
+    <string name="title_activity_login_conductor">LoginConductor</string>
+    <string name="prompt_email">Email</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_sign_in">Sign in or register</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="welcome">"Welcome !"</string>
+    <string name="invalid_username">Not a valid username</string>
+    <string name="invalid_password">Password must be >5 characters</string>
+    <string name="login_failed">"Login failed"</string>
+    <string name="title_activity_login">LoginActivity</string>
+    <string name="title_activity_login_ususario">LoginActivityUsusario</string>
+    <string name="Usuario">Usuario</string>
+    <string name="Conductor">Conductor</string>
+    <string name="iniciar_sesi_n_como">Iniciar sesión como:</string>
+    <string name="transporte_publico_cdmx">Transporte Publico CDMX</string>
+    <string name="title_activity_maps_u">MapsActivityU</string>
+    <string name="title_activity_maps">MapsActivity</string>
+    <string name="nombre_de_usuario">Nombre de usuario</string>
+    <string name="contrase_a">Contraseña</string>
+    <string name="registrar">Registrar</string>
+    <string name="iniciar_sesi_n">Iniciar sesión</string>
+    <string name="crear_cuenta">Crear cuenta</string>
+    <string name="Registro">Registro</string>
+    <string name="nombre_completo">Nombre completo</string>
+    <string name="correo_electr_nico">Correo electrónico</string>
+    <string name="inicia_sesi_n_aqu">Inicia sesión aquí</string>
+    <string name="placa">Placa</string>
+</resources>
