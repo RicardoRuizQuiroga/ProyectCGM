@@ -28,11 +28,10 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng cdmx = new LatLng(19.321968452621736, -99.0945618668194);
+        LatLng cdmx = new LatLng(19.320973264958717, -99.08880490420951);
         mMap.addMarker(new MarkerOptions()
                 .position(cdmx)
-                .title("Marker in Lomas Estrella"));
+                .title("Unidad Habitacional La Palma"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cdmx,25));
     }
 }

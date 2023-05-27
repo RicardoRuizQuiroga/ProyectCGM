@@ -69,7 +69,7 @@ public class SignUpDriver extends AppCompatActivity {
                         Toast.makeText(SignUpDriver.this, "datos insertados", Toast.LENGTH_SHORT).show();
                         progressDialog.dismiss();
 
-                        Intent intent = new Intent(SignUpDriver.this, LoginUser.class);
+                        Intent intent = new Intent(SignUpDriver.this, LoginDriver.class);
                         startActivity(intent);
                     }
                     else{
