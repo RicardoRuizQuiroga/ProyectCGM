@@ -19,7 +19,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:textColor="#ed008c"
-        tools:targetApi="jelly_bean" />
+         />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -45,7 +45,9 @@
                 android:id="@+id/lusername"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:drawableEnd="@drawable/ic_user" />
+                android:drawableEnd="@drawable/ic_user"
+                android:textColorHint="#616161"
+                tools:ignore="TextContrastCheck,VisualLintTextFieldSize" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -63,8 +65,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:drawableEnd="@drawable/ic_password"
-                android:drawableRight="@drawable/ic_password"
-                tools:targetApi="jelly_bean" />
+                android:textColorHint="#616161"
+                tools:ignore="TextContrastCheck"
+                android:inputType="textPassword"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <ProgressBar
@@ -84,9 +87,11 @@
             android:backgroundTint="#ed008c"
             android:onClick="Login"
             android:text="@string/iniciar_sesi_n"
+            android:textColor="#000000"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/progress" />
+            app:layout_constraintTop_toBottomOf="@+id/progress"
+            tools:ignore="DuplicateSpeakableTextCheck" />
 
         <TextView
             android:id="@+id/signUpText"
@@ -99,6 +104,17 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/buttonLogin"
             />
+
+        <Button
+            android:id="@+id/button2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:text="Button"
+            app:layout_constraintTop_toBottomOf="@+id/signUpText"
+            tools:layout_editor_absoluteX="58dp" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
