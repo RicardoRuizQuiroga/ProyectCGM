@@ -24,18 +24,14 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
-import com.google.maps.DirectionsApi;
-import com.google.maps.DirectionsApiRequest;
-import com.google.maps.GeoApiContext;
-import com.google.maps.PendingResult;
-import com.google.maps.model.DirectionsResult;
-import com.google.maps.model.DirectionsRoute;
-import com.google.maps.model.DirectionsStep;
-import com.google.maps.model.TravelMode;
-import com.google.maps.model.Unit;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.android.gms.maps.model.TileProvider;
+import com.google.android.gms.maps.model.UrlTileProvider;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 
 public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
@@ -45,8 +41,6 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     private Marker markerDestino;
     private Polyline rutaPolyline;
     private Button buttonObtenerRuta;
-    private Button buttonCancelarRuta;
-    private List<Polyline> polylinesList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,19 +48,10 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
         setContentView(R.layout.activity_mapa_user);
 
         buttonObtenerRuta = findViewById(R.id.buttonObtenerRuta);
-        buttonCancelarRuta = findViewById(R.id.buttonCancelarRuta);
-
         buttonObtenerRuta.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 obtenerRuta();
-            }
-        });
-
-        buttonCancelarRuta.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                cancelarRuta();
             }
         });
 
@@ -95,8 +80,6 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
 
         enableLocationPermission();
         enableTrafficOverlay();
-
-        polylinesList = new ArrayList<>();
     }
 
     private void enableLocationPermission() {
@@ -108,7 +91,21 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     }
 
     private void enableTrafficOverlay() {
-        // Código para habilitar la capa de tráfico en el mapa
+        TileProvider trafficTileProvider = new UrlTileProvider(256, 256) {
+            @Override
+            public URL getTileUrl(int x, int y, int zoom) {
+                String baseUrl = "https://mt1.google.com/vt/lyrs=m@221097413,traffic&x=" + x + "&y=" + y + "&z=" + zoom;
+                try {
+                    return new URL(baseUrl);
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        };
+
+        TileOverlay trafficOverlay = googleMap.addTileOverlay(new TileOverlayOptions().tileProvider(trafficTileProvider));
+        trafficOverlay.setTransparency(0.5f);
     }
 
     private void obtenerRuta() {
@@ -120,93 +117,29 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
         LatLng origen = markerOrigen.getPosition();
         LatLng destino = markerDestino.getPosition();
 
-        // Crear solicitud de dirección utilizando la API de Google Maps
-        DirectionsApiRequest request = DirectionsApi.newRequest(getGeoApiContext())
-                .mode(TravelMode.DRIVING)
-                .origin(new com.google.maps.model.LatLng(origen.latitude, origen.longitude))
-                .destination(new com.google.maps.model.LatLng(destino.latitude, destino.longitude))
-                .units(Unit.METRIC);
+        // Configurar opciones de la línea de ruta
+        PolylineOptions polylineOptions = new PolylineOptions()
+                .width(10f)
+                .color(Color.BLUE)
+                .startCap(new RoundCap())
+                .endCap(new RoundCap());
 
-        // Realizar la solicitud de dirección de forma asincrónica
-        request.setCallback(new PendingResult.Callback<DirectionsResult>() {
-            @Override
-            public void onResult(DirectionsResult result) {
-                if (result != null && result.routes.length > 0) {
-                    DirectionsRoute ruta = result.routes[0];
+        // Agregar los puntos de origen y destino a las opciones de la línea de ruta
+        polylineOptions.add(origen, destino);
 
-                    // Obtener los puntos de referencia de la ruta
-                    List<LatLng> puntosReferencia = obtenerPuntosReferencia(ruta);
-
-                    // Configurar opciones de la línea de ruta
-                    PolylineOptions polylineOptions = new PolylineOptions()
-                            .width(10f)
-                            .color(Color.BLUE)
-                            .startCap(new RoundCap())
-                            .endCap(new RoundCap());
-
-                    // Agregar los puntos de referencia a las opciones de la línea de ruta
-                    polylineOptions.addAll(puntosReferencia);
-
-                    // Dibujar la línea de ruta en el mapa
-                    rutaPolyline = googleMap.addPolyline(polylineOptions);
-                    polylinesList.add(rutaPolyline);
-
-                    // Ajustar la cámara para mostrar toda la ruta
-                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                    builder.include(origen);
-                    builder.include(destino);
-                    LatLngBounds bounds = builder.build();
-                    int padding = 100; // Margen en píxeles alrededor de la ruta
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
-
-                    buttonObtenerRuta.setEnabled(false);
-                    buttonCancelarRuta.setEnabled(true);
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                Toast.makeText(MapaUser.this, "Error al obtener la ruta", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private List<LatLng> obtenerPuntosReferencia(DirectionsRoute ruta) {
-        List<LatLng> puntosReferencia = new ArrayList<>();
-        if (ruta != null && ruta.legs != null && ruta.legs.length > 0 &&
-                ruta.legs[0].steps != null && ruta.legs[0].steps.length > 0) {
-            for (DirectionsStep step : ruta.legs[0].steps) {
-                com.google.maps.model.LatLng startLatLng = step.startLocation;
-                puntosReferencia.add(new LatLng(startLatLng.lat, startLatLng.lng));
-
-                com.google.maps.model.LatLng endLatLng = step.endLocation;
-                puntosReferencia.add(new LatLng(endLatLng.lat, endLatLng.lng));
-            }
-        }
-        return puntosReferencia;
-    }
-
-    private GeoApiContext getGeoApiContext() {
-        // Reemplaza "YOUR_API_KEY" con tu propia clave de API de Google Maps
-        GeoApiContext context = new GeoApiContext.Builder()
-                .apiKey("AIzaSyCWBbI7Qz4alPL4wnc2D7DKMI6CYXEiX8E")
-                .build();
-        return context;
-    }
-
-    private void cancelarRuta() {
+        // Dibujar la línea de ruta en el mapa
         if (rutaPolyline != null) {
             rutaPolyline.remove();
-            rutaPolyline = null;
         }
+        rutaPolyline = googleMap.addPolyline(polylineOptions);
 
-        for (Polyline polyline : polylinesList) {
-            polyline.remove();
-        }
-        polylinesList.clear();
-
-        buttonObtenerRuta.setEnabled(true);
-        buttonCancelarRuta.setEnabled(false);
+        // Ajustar la cámara para mostrar toda la ruta
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        builder.include(origen);
+        builder.include(destino);
+        LatLngBounds bounds = builder.build();
+        int padding = 100; // Margen en píxeles alrededor de la ruta
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
     }
 
     @Override
