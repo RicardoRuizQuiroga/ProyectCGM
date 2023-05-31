@@ -1,12 +1,12 @@
 package esime.proyecto.proyectcgm;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
@@ -25,7 +25,7 @@ public class LoginDriver extends AppCompatActivity {
     TextInputEditText placa, password;
 
     String str_placa,str_password;
-    String url = "http://10.0.2.2:80/LoginRegister/logind.php";
+    String url = "https://proyectogm.webcindario.com/LoginRegister/logind.php";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

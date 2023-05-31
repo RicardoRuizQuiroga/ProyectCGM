@@ -1,8 +1,12 @@
 package esime.proyecto.proyectcgm;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -33,7 +37,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 
-public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
+public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
     private GoogleMap googleMap;
@@ -41,6 +45,7 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     private Marker markerDestino;
     private Polyline rutaPolyline;
     private Button buttonObtenerRuta;
+    private LocationManager locationManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +85,7 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
 
         enableLocationPermission();
         enableTrafficOverlay();
+        enableLocationUpdates();
     }
 
     private void enableLocationPermission() {
@@ -106,6 +112,13 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
 
         TileOverlay trafficOverlay = googleMap.addTileOverlay(new TileOverlayOptions().tileProvider(trafficTileProvider));
         trafficOverlay.setTransparency(0.5f);
+    }
+
+    private void enableLocationUpdates() {
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, this);
+        }
     }
 
     private void obtenerRuta() {
@@ -143,12 +156,42 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback {
     }
 
     @Override
+    public void onLocationChanged(@NonNull Location location) {
+        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+
+        // Si ya existe un marcador de ubicación actual, lo eliminamos antes de agregar uno nuevo
+        if (markerOrigen != null) {
+            markerOrigen.remove();
+        }
+
+        // Agregar el marcador de ubicación actual
+        markerOrigen = googleMap.addMarker(new MarkerOptions().position(currentLocation).title("Ubicación Actual"));
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        // Implementa la lógica para el cambio de estado del proveedor de ubicación
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        // Implementa la lógica cuando un proveedor de ubicación se habilita
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        // Implementa la lógica cuando un proveedor de ubicación se deshabilita
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableLocationPermission();
+                enableLocationUpdates();
             }
         }
     }
 }
+

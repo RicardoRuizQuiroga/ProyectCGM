@@ -1,16 +1,14 @@
 package esime.proyecto.proyectcgm;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
@@ -63,7 +61,7 @@ Button b_insertar;
         }
         else {
             progressDialog.show();
-            StringRequest request =new StringRequest(Request.Method.POST, "http://10.0.2.2:80/LoginRegister/insertar.php", new Response.Listener<String>() {
+            StringRequest request =new StringRequest(Request.Method.POST, "https://proyectogm.webcindario.com/LoginRegister/insertar.php", new Response.Listener<String>() {
                 @Override
                 public void onResponse(String response) {
                     if (response.equalsIgnoreCase("Registro correcto"))
