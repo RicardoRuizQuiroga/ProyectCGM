@@ -28,17 +28,14 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
-import com.google.android.gms.maps.model.TileOverlay;
-import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.android.gms.maps.model.TileProvider;
-import com.google.android.gms.maps.model.UrlTileProvider;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-
+import com.google.maps.DirectionsApi;
+import com.google.maps.GeoApiContext;
+import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.TravelMode;
 
 public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private static final String API_KEY = "AIzaSyCWBbI7Qz4alPL4wnc2D7DKMI6CYXEiX8E";
 
     private GoogleMap googleMap;
     private Marker markerOrigen;
@@ -46,6 +43,7 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
     private Polyline rutaPolyline;
     private Button buttonObtenerRuta;
     private LocationManager locationManager;
+    private GeoApiContext geoApiContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +60,10 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.mapFragment);
         mapFragment.getMapAsync(this);
+
+        geoApiContext = new GeoApiContext.Builder()
+                .apiKey(API_KEY)
+                .build();
     }
 
     @Override
@@ -84,7 +86,6 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
         });
 
         enableLocationPermission();
-        enableTrafficOverlay();
         enableLocationUpdates();
     }
 
@@ -94,24 +95,6 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
         } else {
             googleMap.setMyLocationEnabled(true);
         }
-    }
-
-    private void enableTrafficOverlay() {
-        TileProvider trafficTileProvider = new UrlTileProvider(256, 256) {
-            @Override
-            public URL getTileUrl(int x, int y, int zoom) {
-                String baseUrl = "https://mt1.google.com/vt/lyrs=m@221097413,traffic&x=" + x + "&y=" + y + "&z=" + zoom;
-                try {
-                    return new URL(baseUrl);
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }
-        };
-
-        TileOverlay trafficOverlay = googleMap.addTileOverlay(new TileOverlayOptions().tileProvider(trafficTileProvider));
-        trafficOverlay.setTransparency(0.5f);
     }
 
     private void enableLocationUpdates() {
@@ -130,42 +113,56 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
         LatLng origen = markerOrigen.getPosition();
         LatLng destino = markerDestino.getPosition();
 
-        // Configurar opciones de la línea de ruta
-        PolylineOptions polylineOptions = new PolylineOptions()
-                .width(10f)
-                .color(Color.BLUE)
-                .startCap(new RoundCap())
-                .endCap(new RoundCap());
+        // Consultar la ruta utilizando la API de Direcciones de Google Maps
+        DirectionsResult result;
+        try {
+            result = DirectionsApi.newRequest(geoApiContext)
+                    .mode(TravelMode.DRIVING)
+                    .origin(new com.google.maps.model.LatLng(origen.latitude, origen.longitude))
+                    .destination(new com.google.maps.model.LatLng(destino.latitude, destino.longitude))
+                    .await();
 
-        // Agregar los puntos de origen y destino a las opciones de la línea de ruta
-        polylineOptions.add(origen, destino);
+            // Verificar si se obtuvo una ruta válida
+            if (result.routes != null && result.routes.length > 0) {
+                com.google.maps.model.LatLng[] path = result.routes[0].overviewPolyline.decodePath().toArray(new com.google.maps.model.LatLng[0]);
 
-        // Dibujar la línea de ruta en el mapa
-        if (rutaPolyline != null) {
-            rutaPolyline.remove();
+                // Configurar opciones de la línea de ruta
+                PolylineOptions polylineOptions = new PolylineOptions()
+                        .width(10f)
+                        .color(Color.BLUE)
+                        .startCap(new RoundCap())
+                        .endCap(new RoundCap());
+
+                // Agregar los puntos de la ruta a las opciones de la línea de ruta
+                for (com.google.maps.model.LatLng point : path) {
+                    polylineOptions.add(new LatLng(point.lat, point.lng));
+                }
+
+                // Dibujar la línea de ruta en el mapa
+                if (rutaPolyline != null) {
+                    rutaPolyline.remove();
+                }
+                rutaPolyline = googleMap.addPolyline(polylineOptions);
+
+                // Ajustar la cámara para mostrar toda la ruta
+                LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                builder.include(origen);
+                builder.include(destino);
+                LatLngBounds bounds = builder.build();
+                int padding = 100; // Margen en píxeles alrededor de la ruta
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
+            } else {
+                Toast.makeText(this, "No se encontró una ruta válida", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error al obtener la ruta", Toast.LENGTH_SHORT).show();
         }
-        rutaPolyline = googleMap.addPolyline(polylineOptions);
-
-        // Ajustar la cámara para mostrar toda la ruta
-        LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        builder.include(origen);
-        builder.include(destino);
-        LatLngBounds bounds = builder.build();
-        int padding = 100; // Margen en píxeles alrededor de la ruta
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
     }
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
-        LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-
-        // Si ya existe un marcador de ubicación actual, lo eliminamos antes de agregar uno nuevo
-        if (markerOrigen != null) {
-            markerOrigen.remove();
-        }
-
-        // Agregar el marcador de ubicación actual
-        markerOrigen = googleMap.addMarker(new MarkerOptions().position(currentLocation).title("Ubicación Actual"));
+        // Código para manejar la actualización de ubicación del usuario
     }
 
     @Override
@@ -194,4 +191,3 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
         }
     }
 }
-
