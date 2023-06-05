@@ -45,6 +45,11 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
     private LocationManager locationManager;
     private GeoApiContext geoApiContext;
 
+    private double minLat = 19.297850147606827;
+    private double maxLat = 19.355853016831695;
+    private double minLng = -99.10588844022752;
+    private double maxLng = -99.0246542252318;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,23 +75,31 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
     public void onMapReady(GoogleMap googleMap) {
         this.googleMap = googleMap;
 
-        LatLng avenidaTlahuac = new LatLng(19.295454, -99.035912); // Coordenadas de Avenida Tláhuac en Ciudad de México
+        LatLng avenidaTlahuac = new LatLng((maxLat + minLat) / 2, (maxLng + minLng) / 2); // Coordenadas del centro de la Avenida Tláhuac en Ciudad de México
         this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(avenidaTlahuac, 14f));
 
         this.googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                if (markerOrigen == null) {
-                    markerOrigen = googleMap.addMarker(new MarkerOptions().position(latLng).title("Origen"));
-                } else if (markerDestino == null) {
-                    markerDestino = googleMap.addMarker(new MarkerOptions().position(latLng).title("Destino"));
-                    buttonObtenerRuta.setEnabled(true);
+                if (isLocationOnAvenidaTlahuac(latLng)) {
+                    if (markerDestino == null) {
+                        markerDestino = googleMap.addMarker(new MarkerOptions().position(latLng).title("Destino"));
+                        buttonObtenerRuta.setEnabled(true);
+                    }
+                } else {
+                    Toast.makeText(MapaUser.this, "Seleccione una ubicación en la Avenida Tláhuac", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
         enableLocationPermission();
         enableLocationUpdates();
+        showTraffic(); // Mostrar tráfico en el mapa
+    }
+
+    private boolean isLocationOnAvenidaTlahuac(LatLng latLng) {
+        // Verificar si la ubicación está dentro de los límites de la Avenida Tláhuac
+        return latLng.latitude >= minLat && latLng.latitude <= maxLat && latLng.longitude >= minLng && latLng.longitude <= maxLng;
     }
 
     private void enableLocationPermission() {
@@ -105,88 +118,100 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
     }
 
     private void obtenerRuta() {
-        if (markerOrigen == null || markerDestino == null) {
-            Toast.makeText(this, "Debe seleccionar origen y destino", Toast.LENGTH_SHORT).show();
+        if (markerDestino == null) {
+            Toast.makeText(this, "Debe seleccionar un destino", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        LatLng origen = markerOrigen.getPosition();
         LatLng destino = markerDestino.getPosition();
 
-        // Consultar la ruta utilizando la API de Direcciones de Google Maps
-        DirectionsResult result;
-        try {
-            result = DirectionsApi.newRequest(geoApiContext)
-                    .mode(TravelMode.DRIVING)
-                    .origin(new com.google.maps.model.LatLng(origen.latitude, origen.longitude))
-                    .destination(new com.google.maps.model.LatLng(destino.latitude, destino.longitude))
-                    .await();
+        // Obtener la ubicación del usuario
+        Location lastKnownLocation = null;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
 
-            // Verificar si se obtuvo una ruta válida
-            if (result.routes != null && result.routes.length > 0) {
-                com.google.maps.model.LatLng[] path = result.routes[0].overviewPolyline.decodePath().toArray(new com.google.maps.model.LatLng[0]);
+        if (lastKnownLocation != null) {
+            LatLng origen = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
 
-                // Configurar opciones de la línea de ruta
-                PolylineOptions polylineOptions = new PolylineOptions()
-                        .width(10f)
-                        .color(Color.BLUE)
-                        .startCap(new RoundCap())
-                        .endCap(new RoundCap());
+            // Consultar la ruta utilizando la API de Direcciones de Google Maps
+            DirectionsResult result;
+            try {
+                result = DirectionsApi.newRequest(geoApiContext)
+                        .mode(TravelMode.DRIVING)
+                        .origin(new com.google.maps.model.LatLng(origen.latitude, origen.longitude))
+                        .destination(new com.google.maps.model.LatLng(destino.latitude, destino.longitude))
+                        .await();
 
-                // Agregar los puntos de la ruta a las opciones de la línea de ruta
-                for (com.google.maps.model.LatLng point : path) {
-                    polylineOptions.add(new LatLng(point.lat, point.lng));
+                // Verificar si se obtuvo una ruta válida
+                if (result.routes != null && result.routes.length > 0) {
+                    com.google.maps.model.LatLng[] path = result.routes[0].overviewPolyline.decodePath().toArray(new com.google.maps.model.LatLng[0]);
+
+                    // Configurar opciones de la línea de ruta
+                    PolylineOptions polylineOptions = new PolylineOptions()
+                            .width(10f)
+                            .color(Color.BLUE)
+                            .startCap(new RoundCap())
+                            .endCap(new RoundCap());
+
+                    // Agregar los puntos de la ruta a las opciones de la línea de ruta
+                    for (com.google.maps.model.LatLng point : path) {
+                        polylineOptions.add(new LatLng(point.lat, point.lng));
+                    }
+
+                    // Dibujar la línea de ruta en el mapa
+                    if (rutaPolyline != null) {
+                        rutaPolyline.remove();
+                    }
+                    rutaPolyline = googleMap.addPolyline(polylineOptions);
+
+                    // Ajustar la cámara para mostrar toda la ruta
+                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                    builder.include(origen);
+                    builder.include(destino);
+                    LatLngBounds bounds = builder.build();
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+
+                    // Limpiar el marcador de destino
+                    markerDestino.remove();
+                    markerDestino = null;
+                    buttonObtenerRuta.setEnabled(false);
+                } else {
+                    Toast.makeText(this, "No se encontró una ruta", Toast.LENGTH_SHORT).show();
                 }
-
-                // Dibujar la línea de ruta en el mapa
-                if (rutaPolyline != null) {
-                    rutaPolyline.remove();
-                }
-                rutaPolyline = googleMap.addPolyline(polylineOptions);
-
-                // Ajustar la cámara para mostrar toda la ruta
-                LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                builder.include(origen);
-                builder.include(destino);
-                LatLngBounds bounds = builder.build();
-                int padding = 100; // Margen en píxeles alrededor de la ruta
-                googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
-            } else {
-                Toast.makeText(this, "No se encontró una ruta válida", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Error al obtener la ruta", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
         }
     }
 
-    @Override
-    public void onLocationChanged(@NonNull Location location) {
-        // Código para manejar la actualización de ubicación del usuario
+    private void showTraffic() {
+        googleMap.setTrafficEnabled(true);
     }
 
     @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        // Implementa la lógica para el cambio de estado del proveedor de ubicación
-    }
+    public void onLocationChanged(@NonNull Location location) {}
 
     @Override
-    public void onProviderEnabled(String provider) {
-        // Implementa la lógica cuando un proveedor de ubicación se habilita
-    }
+    public void onProviderEnabled(@NonNull String provider) {}
 
     @Override
-    public void onProviderDisabled(String provider) {
-        // Implementa la lógica cuando un proveedor de ubicación se deshabilita
-    }
+    public void onProviderDisabled(@NonNull String provider) {}
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {}
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                enableLocationPermission();
-                enableLocationUpdates();
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    googleMap.setMyLocationEnabled(true);
+                    enableLocationUpdates();
+                }
             }
         }
     }
