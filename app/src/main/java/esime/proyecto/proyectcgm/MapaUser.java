@@ -45,10 +45,10 @@ public class MapaUser extends AppCompatActivity implements OnMapReadyCallback, L
     private LocationManager locationManager;
     private GeoApiContext geoApiContext;
 
-    private double minLat = 19.297850147606827;
-    private double maxLat = 19.355853016831695;
-    private double minLng = -99.10588844022752;
-    private double maxLng = -99.0246542252318;
+    private double minLat = 19.299652020491646;
+    private double maxLat = 19.35655457105291;
+    private double minLng = -99.10735367535725;
+    private double maxLng = -99.04449114705703;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
